@@ -1,0 +1,142 @@
+---
+title: "String and factor"
+output: html_document
+---
+
+Today we're studying a case.
+```{r}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+)
+```
+
+```{r}
+library(tidyverse)
+library(rvest)
+library(p8105.datasets)
+```
+
+
+```{r}
+string_vec = c("my", "name", "is", "jeff")
+
+str_detect(string_vec, "jeff")
+```
+
+```{r}
+string_vec = c(
+  "i think we all rule for participating",
+  "i think i have been caught",
+  "i think this will be quite fun actually",
+  "it will be fun, i think"
+  )
+
+str_detect(string_vec, "^i think")
+# ^ exactly "" after ^
+```
+
+```{r}
+string_vec = c(
+  "Y'all remember Pres. HW Bush?",
+  "I saw a green bush",
+  "BBQ and Bushwalking at Molonglo Gorge",
+  "BUSH -- LIVE IN CONCERT!!"
+  )
+
+str_detect(string_vec,"[Bb][Uu][Ss][Hh]") #any of the things inside the bracket
+```
+
+```{r}
+# number followed by a letter
+string_vec = c(
+  '7th inning stretch',
+  '1st half soon to begin. Texas won the toss.',
+  'she is 5 feet 4 inches tall',
+  '3AM - cant sleep :('
+  )
+
+str_detect(string_vec, "^[0-9][a-zA-Z]")# lower case a to lowercase z, uppercase a to uppercase z
+```
+
+```{r}
+string_vec = c(
+  'Its 7:11 in the evening',
+  'want to go to 7-11?',
+  'my flight is AA711',
+  'NetBios: scanning ip 203.167.114.66'
+  )
+
+str_detect(string_vec, "7.11")
+# . means anythings
+```
+
+```{r}
+# how to search those specific characters [], . - ?
+string_vec = c(
+  'The CI is [2, 5]',
+  ':-]',
+  ':-[',
+  'I found the answer on pages [6-7]'
+  )
+
+str_detect(string_vec, "\\[[0-9]")
+# search for brackets and brackets followed by a number
+```
+
+## why factors are weired
+```{r}
+factor_vec = factor(c("male", "male", "female", "female"))
+
+
+as.numeric(factor_vec)
+
+factor_vec = fct_relevel(factor_vec, "male")
+```
+
+```{r}
+nsduh_url = "http://samhda.s3-us-gov-west-1.amazonaws.com/s3fs-public/field-uploads/2k15StateFiles/NSDUHsaeShortTermCHG2015.htm"
+
+table_marj = 
+  read_html(nsduh_url) %>% 
+  html_table() %>% 
+  first() %>%
+  slice(-1)
+```
+
+tidy this up
+
+```{r}
+
+marj_df = table_marj %>% 
+  select(- contains("P value")) %>% 
+  pivot_longer(
+    -State,
+    names_to= "age_year",
+    values_to = "percent"
+  ) %>% 
+  mutate(
+    percent = str_replace(percent, "[a-b]$", "" ),  #$if there's somthin unmatch, give me an error msg! 
+    percent= as.numeric(percent)
+  ) %>% 
+  separate(age_year, into =c("age", "year"), sep = "\\(") %>% 
+  mutate(
+    year= str_replace(year, "\\)", "")
+  ) %>% 
+  filter(
+    !(State %in% c("Total U.S", "Northeast", "Midwest", "South", "West",
+      "District of Columbia"))
+  )
+```
+
+
+```{r}
+marj_df %>% filter(age == "12-17") %>% 
+    mutate(State = fct_reorder(State, percent)) %>% 
+  ggplot(aes(x= State, y= percent, color=year))+geom_point()+ 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
